@@ -32,7 +32,7 @@ public class Task1 {
     значит для всего persons O(n)
      */
     Map<Integer,Person> mapPersons = persons.stream()
-            .collect(Collectors.toMap(Person::id,Function.identity(),(a,b)->a));
+            .collect(Collectors.toMap(Person::id,Function.identity()));
 
     /*
     Заменяем каждый элемент из исходного списка, достав(O(1)) по ключу(id)-Person из mapPersons - O(n).
