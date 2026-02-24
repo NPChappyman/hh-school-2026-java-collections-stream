@@ -1,14 +1,8 @@
 package tasks;
 
 import common.Person;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -29,65 +23,61 @@ public class Task9 {
     if (persons.size() == 0) {
       return Collections.emptyList();
     }
-    persons.remove(0);
-    return persons.stream().map(Person::firstName).collect(Collectors.toList());
+    //Вместо того, чтобы менять исходной список, можем пропустить первый элемент с помощью skip
+    return persons.stream().skip(1).map(Person::firstName).collect(Collectors.toList());
   }
 
   // Зачем-то нужны различные имена этих же персон (без учета фальшивой разумеется)
+
+  //Улучшается читаемость, сокращаем код - теперь нет необходимости в накладных расходах по созданию stream,
+  // а distinct и так использует хеш таблицы в своей реализации.
   public Set<String> getDifferentNames(List<Person> persons) {
-    return getNames(persons).stream().distinct().collect(Collectors.toSet());
+    return new HashSet<>(getNames(persons));
   }
 
   // Тут фронтовая логика, делаем за них работу - склеиваем ФИО
   public String convertPersonToString(Person person) {
-    String result = "";
-    if (person.secondName() != null) {
-      result += person.secondName();
-    }
-
-    if (person.firstName() != null) {
-      result += " " + person.firstName();
-    }
-
-    if (person.secondName() != null) {
-      result += " " + person.secondName();
-    }
-    return result;
+//Исправлена логика работы - теперь ФИО верно склеивается(secondname не повторяется дважды)
+// Код стал более читаемым и коротким.
+    return List.of(person.firstName(),person.middleName(),person.secondName()).stream()
+            .filter(personStr -> personStr != null)
+            .collect(Collectors.joining(" "));
   }
 
   // словарь id персоны -> ее имя
+  //HashMap, который инициализирован с ёмкостью 1 будет расширяться и перераспределять элементы слишком часто - при добавлении
+  //новых людей. Релизация с циклом for заменена на stream - улучшилась читаемость .
   public Map<Integer, String> getPersonNames(Collection<Person> persons) {
-    Map<Integer, String> map = new HashMap<>(1);
-    for (Person person : persons) {
-      if (!map.containsKey(person.id())) {
-        map.put(person.id(), convertPersonToString(person));
-      }
-    }
-    return map;
+
+    return persons.stream()
+            .collect(Collectors.toMap(
+                    Person::id,
+                    person->convertPersonToString(person),
+                    (previousKey, newKey)->previousKey
+            ));
   }
 
   // есть ли совпадающие в двух коллекциях персоны?
+  //Прежний алгоритм выполняется за O(n*m) - вложенный цикл.
+  //Можно создать set из элементов одной из коллекций, а затем итерироваться по элементам другой, проверяя на совпадение
+  //с каким-либо элементом из Set - это приемлимо, так как поиск в Set O(1).
+  //Итоговая сложность - O(m) (на создание Map) + O(n) -> O(n+m)
   public boolean hasSamePersons(Collection<Person> persons1, Collection<Person> persons2) {
-    boolean has = false;
-    for (Person person1 : persons1) {
-      for (Person person2 : persons2) {
-        if (person1.equals(person2)) {
-          has = true;
-        }
-      }
-    }
-    return has;
+    Set<Person> person2Set = new HashSet<>(persons2);
+    return persons1.stream().anyMatch(person2Set::contains);
   }
 
   // Посчитать число четных чисел
+  //Упростили код - код стал более читаемым и простым. Для ясности использовали специальный метод count()
   public long countEven(Stream<Integer> numbers) {
-    count = 0;
-    numbers.filter(num -> num % 2 == 0).forEach(num -> count++);
-    return count;
+    return numbers.filter(number->number%2==0).count();
   }
 
   // Загадка - объясните почему assert тут всегда верен
   // Пояснение в чем соль - мы перетасовали числа, обернули в HashSet, а toString() у него вернул их в сортированном порядке
+
+  //Хеш код обьекта Integer = самому значению числа. Так как мы инициализировали set cразу необходимым capacity, каждый
+  //Integer будет расположен в бакете с индексом равным значению этого Integer.
   void listVsSet() {
     List<Integer> integers = IntStream.rangeClosed(1, 10000).boxed().collect(Collectors.toList());
     List<Integer> snapshot = new ArrayList<>(integers);
